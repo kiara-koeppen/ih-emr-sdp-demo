@@ -1,0 +1,53 @@
+bundle:
+  name: ih_emr_sdp_demo
+
+variables:
+  catalog:
+    description: Unity Catalog catalog name
+  schema:
+    description: Target schema for all pipeline tables
+  source_volume_path:
+    description: Path to raw EMR data files (ABFSS or Volumes)
+  schema_location_base:
+    description: Base path for Auto Loader schema metadata
+
+targets:
+  dev:
+    mode: development
+    default: true
+    variables:
+      catalog: hcsc_agents_demo
+      schema: emr_sdp_demo
+      source_volume_path: /Volumes/hcsc_agents_demo/emr_sdp_demo/raw_emr_data
+      schema_location_base: /Volumes/hcsc_agents_demo/emr_sdp_demo/pipeline_metadata/schemas
+
+  prod:
+    variables:
+      catalog: production
+      schema: emr_pipeline
+      source_volume_path: /Volumes/production/emr_pipeline/raw_emr_data
+      schema_location_base: /Volumes/production/emr_pipeline/pipeline_metadata/schemas
+
+resources:
+  pipelines:
+    emr_sdp_pipeline:
+      name: "IH EMR SDP Demo Pipeline"
+      target: ${var.schema}
+      catalog: ${var.catalog}
+      development: true
+      continuous: false
+      channel: CURRENT
+      libraries:
+        - file:
+            path: src/transformations/01_bronze_ingestion.py
+        - file:
+            path: src/transformations/02_silver_validated.py
+        - file:
+            path: src/transformations/03_gold_auto_cdc.py
+        - file:
+            path: src/transformations/04_gold_reporting.py
+      configuration:
+        catalog: ${var.catalog}
+        schema: ${var.schema}
+        source_volume_path: ${var.source_volume_path}
+        schema_location_base: ${var.schema_location_base}
